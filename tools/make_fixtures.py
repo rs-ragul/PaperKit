@@ -34,7 +34,7 @@ os.makedirs(OUT, exist_ok=True)
 NOW = datetime.datetime.now(datetime.timezone.utc)
 
 
-def name(cn, org="VeriPDF Test PKI"):
+def name(cn, org="PaperKit Test PKI"):
     return x509.Name([
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, org),
         x509.NameAttribute(NameOID.COMMON_NAME, cn),
@@ -101,7 +101,7 @@ def make_leaf(ca_key, ca_cert, cn):
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     cert = (
         x509.CertificateBuilder()
-        .subject_name(name(cn, "VeriPDF Test Signer"))
+        .subject_name(name(cn, "PaperKit Test Signer"))
         .issuer_name(ca_cert.subject)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
@@ -183,7 +183,7 @@ def sign_pdf(base, out, signer):
             field_name="Signature1",
             md_algorithm="sha256",
             reason="Issued by the revenue department",
-            contact_info="veripdf test fixture",
+            contact_info="paperkit test fixture",
         )
         field = SigFieldSpec(sig_field_name="Signature1", on_page=0, box=(60, 60, 320, 160))
         pdf_signer = signers.PdfSigner(
@@ -198,8 +198,8 @@ def sign_pdf(base, out, signer):
 
 def main():
     print("building PKI ...")
-    root_key, root_cert = make_root("VeriPDF Test Root CA")
-    int_key, int_cert = make_intermediate(root_key, root_cert, "VeriPDF Test Intermediate CA")
+    root_key, root_cert = make_root("PaperKit Test Root CA")
+    int_key, int_cert = make_intermediate(root_key, root_cert, "PaperKit Test Intermediate CA")
     leaf_key, leaf_cert = make_leaf(int_key, int_cert, "Zonal Deputy Tahsildar, Tambaram")
     trusted_signer = make_signer(leaf_key, leaf_cert, [int_cert, root_cert])
 

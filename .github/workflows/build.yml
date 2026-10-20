@@ -1,23 +1,89 @@
-name: Windows installer
+name: Build
+
+# Builds the two native apps from the same C# code base and puts them on the
+# Releases page when a version tag is pushed.
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
 jobs:
-  build:
+  windows:
+    name: Windows app
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: '20'
-      - run: npm install
-      - run: npm run bundle
-      - run: npm run dist
+          dotnet-version: '8.0.x'
+      - name: run the tests
+        run: dotnet test native/PaperKit.Spec/PaperKit.Spec.csproj -c Release
+      - name: publish
+        run: >
+          dotnet publish native/PaperKit.Windows/PaperKit.Windows.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -o out/win
       - uses: actions/upload-artifact@v4
         with:
-          name: VeriPDF-windows
-          path: release/
+          name: PaperKit-windows
+          path: out/win/PaperKit.exe
+
+  android:
+    name: Android app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: android workload
+        run: dotnet workload install android
+      - name: run the tests
+        run: dotnet test native/PaperKit.Spec/PaperKit.Spec.csproj -c Release
+      - name: publish
+        run: >
+          dotnet publish native/PaperKit.Android/PaperKit.Android.csproj
+          -c Release -f net8.0-android
+          -p:AndroidSdkDirectory=$ANDROID_SDK_ROOT
+          -p:JavaSdkDirectory=$JAVA_HOME
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PaperKit-android
+          path: '**/in.paperkit.app-Signed.apk'
+
+  release:
+    name: Release
+    needs: [windows, android]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: rename the apps
+        run: |
+          find artifacts -name 'PaperKit.exe' -exec mv {} artifacts/PaperKit-windows-x64.exe \;
+          find artifacts -name 'in.paperkit.app-Signed.apk' -exec mv {} artifacts/PaperKit-android.apk \;
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/PaperKit-windows-x64.exe
+            artifacts/PaperKit-android.apk
+          body: |
+            **PaperKit** - every PDF tool, completely offline.
+
+            * Windows: `PaperKit-windows-x64.exe` - one file, just run it
+            * Android: `PaperKit-android.apk` - copy it to the phone and tap to install
+
+            No account, no upload, no internet permission.

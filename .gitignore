@@ -1,10 +1,14 @@
 node_modules/
 app/dist/
+dist/
+deliverables/
 shells/android/android/app/build/
 shells/android/android/.gradle/
 shells/android/android/build/
+shells/windows/app/
 shells/windows/release/
 *.p12
 *.keystore
 keystore.properties
 .DS_Store
+*.log

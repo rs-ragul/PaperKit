@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>PaperKit.App</RootNamespace>
+    <AssemblyName>PaperKit.App</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>PaperKit</Product>
+    <Company>PaperKit</Company>
+    <Description>The shared part of PaperKit - the view models of the toolbox</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PaperKit.Core\PaperKit.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>PaperKit.Windows</RootNamespace>
+    <AssemblyName>PaperKit</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\build-assets\icon.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <Version>1.0.0</Version>
+    <Product>PaperKit</Product>
+    <Company>PaperKit</Company>
+    <Description>PaperKit - the offline PDF toolbox</Description>
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- the user interface is shared with the Android app -->
+    <AvaloniaXaml Include="..\PaperKit.Ui\**\*.axaml" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\PaperKit.Ui\App.axaml.cs" Link="App.axaml.cs" />
+    <Compile Include="..\PaperKit.Ui\MainWindow.axaml.cs" Link="MainWindow.axaml.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PaperKit.App\PaperKit.App.csproj" />
+  </ItemGroup>
+
+</Project>

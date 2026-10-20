@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>PaperKit.Shot</RootNamespace>
+    <AssemblyName>PaperKit.Shot</AssemblyName>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Headless" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Skia" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaXaml Include="..\PaperKit.Ui\**\*.axaml" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\PaperKit.Ui\App.axaml.cs" Link="App.axaml.cs" />
+    <Compile Include="..\PaperKit.Ui\MainWindow.axaml.cs" Link="MainWindow.axaml.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PaperKit.App\PaperKit.App.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
+    <RootNamespace>PaperKit.Android</RootNamespace>
+    <AssemblyName>PaperKit.Android</AssemblyName>
+    <ApplicationId>in.paperkit.app</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <!-- .NET 8 supports 64 bit Android ABIs only -->
+    <AndroidSupportedAbis>arm64-v8a;x86_64</AndroidSupportedAbis>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <!-- trimming needs more memory than a small build machine has -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <Version>1.0.0</Version>
+    <Product>PaperKit</Product>
+    <Company>PaperKit</Company>
+    <Description>PaperKit - the offline PDF toolbox</Description>
+    <NoWarn>$(NoWarn);NU1701;XA4218</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Android" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- the very same user interface the Windows app runs -->
+    <AvaloniaXaml Include="..\PaperKit.Ui\**\*.axaml" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\PaperKit.Ui\App.axaml.cs" Link="App.axaml.cs" />
+    <Compile Include="..\PaperKit.Ui\MainWindow.axaml.cs" Link="MainWindow.axaml.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PaperKit.App\PaperKit.App.csproj" />
+  </ItemGroup>
+
+  <!--
+    The .NET 8 Android trimmer looks for the Avalonia XAML assembly one folder
+    deeper than Avalonia writes it. Put a copy there so the APK can be trimmed.
+  -->
+  <Target Name="PaperKitAvaloniaTrimFix"
+          AfterTargets="InjectAvaloniaXamlOutput"
+          BeforeTargets="PrepareForILLink"
+          Condition="Exists('$(IntermediateOutputPath)Avalonia\$(TargetName).dll') And !Exists('$(IntermediateOutputPath)Avalonia\Avalonia\$(TargetName).dll')">
+    <Copy SourceFiles="$(IntermediateOutputPath)Avalonia\$(TargetName).dll"
+          DestinationFolder="$(IntermediateOutputPath)Avalonia\Avalonia"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

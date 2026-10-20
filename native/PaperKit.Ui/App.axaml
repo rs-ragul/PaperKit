@@ -1,0 +1,11 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PaperKit.App.App"
+             RequestedThemeVariant="Light">
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="/Styles/PaperKit.axaml" />
+  </Application.Styles>
+
+</Application>

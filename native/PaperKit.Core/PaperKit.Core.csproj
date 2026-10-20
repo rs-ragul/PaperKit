@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>PaperKit.Core</RootNamespace>
+    <AssemblyName>PaperKit.Core</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>PaperKit</Product>
+    <Company>PaperKit</Company>
+    <Description>The offline PDF engine of PaperKit</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pure managed PDF engine (MIT), maintained by empira. No native
+         binaries, so the exact same code runs on Windows and on Android. -->
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
+    <!-- CMS / PKCS#7 parsing and X.509 handling (MIT). -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The seven official CCA India root certificates travel with the app. -->
+    <EmbeddedResource Include="..\..\trust-roots\*.der">
+      <LogicalName>PaperKit.Core.TrustRoots.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
