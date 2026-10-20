@@ -53,7 +53,8 @@ def main() -> int:
                 rel = path.relative_to(ROOT)
                 if skip(rel):
                     continue
-                z.write(path, arcname=str(Path("PaperKit") / rel))
+                # the files land directly in the repository root
+                z.write(path, arcname=str(rel))
                 count += 1
     tmp.replace(OUT)
 

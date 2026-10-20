@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-android</TargetFramework>
+    <!-- always API 34: Avalonia.Android 11.2.3 needs net8.0-android34.0 -->
+    <TargetPlatformVersion>34.0</TargetPlatformVersion>
     <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
     <RootNamespace>PaperKit.Android</RootNamespace>
     <AssemblyName>PaperKit.Android</AssemblyName>

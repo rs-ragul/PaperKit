@@ -45,6 +45,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: show the SDK that will be used
+        run: |
+          echo "dotnet on PATH: $(which dotnet)"
+          dotnet --list-sdks
+          echo "selected SDK: $(dotnet --version)"
       - name: android workload
         run: dotnet workload install android
       - name: run the tests
@@ -53,8 +58,9 @@ jobs:
         run: >
           dotnet publish native/PaperKit.Android/PaperKit.Android.csproj
           -c Release -f net8.0-android
-          -p:AndroidSdkDirectory=$ANDROID_SDK_ROOT
+          -p:AndroidSdkDirectory="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           -p:JavaSdkDirectory=$JAVA_HOME
+          -p:TargetPlatformVersion=34.0
       - uses: actions/upload-artifact@v4
         with:
           name: PaperKit-android
