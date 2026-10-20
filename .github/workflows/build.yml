@@ -52,6 +52,10 @@ jobs:
           echo "selected SDK: $(dotnet --version)"
       - name: android workload
         run: dotnet workload install android
+      - name: android platform and build tools
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
       - name: run the tests
         run: dotnet test native/PaperKit.Spec/PaperKit.Spec.csproj -c Release
       - name: publish
@@ -60,7 +64,7 @@ jobs:
           -c Release -f net8.0-android
           -p:AndroidSdkDirectory="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           -p:JavaSdkDirectory=$JAVA_HOME
-          -p:TargetPlatformVersion=34.0
+          -p:JavaMaximumHeapSize=2G
       - uses: actions/upload-artifact@v4
         with:
           name: PaperKit-android
