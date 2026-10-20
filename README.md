@@ -5,12 +5,46 @@
 **Every PDF tool you need — completely offline.**
 Windows + Android. Nothing ever leaves your device.
 
-[![CI](https://github.com/YOUR_USERNAME/PaperKit/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_USERNAME/PaperKit/actions/workflows/build.yml)
+[![CI](https://github.com/rs-ragul/PaperKit/actions/workflows/build.yml/badge.svg)](https://github.com/rs-ragul/PaperKit/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](LICENSE)
 ![Offline](https://img.shields.io/badge/network-none-22c55e)
 ![Native](https://img.shields.io/badge/UI-Avalonia%20%2C%20no%20WebView-4F46E5)
 
 </div>
+
+---
+
+## Download
+
+<table>
+<tr>
+<td width="50%">
+
+### Windows
+**PaperKit-windows-x64.exe** — one file, ~50 MB
+
+[⬇ Download for Windows](https://github.com/rs-ragul/PaperKit/releases/latest/download/PaperKit-windows-x64.exe)
+
+> Download it, double click it, done. Nothing to install, no .NET needed.
+
+</td>
+<td width="50%">
+
+### Android
+**PaperKit-android.apk** — ~50 MB
+
+[⬇ Download the APK](https://github.com/rs-ragul/PaperKit/releases/latest/download/PaperKit-android.apk)
+
+> Copy it to your phone, tap it, allow "install unknown sources". It asks for **no permissions**.
+
+</td>
+</tr>
+</table>
+
+All releases: **[github.com/rs-ragul/PaperKit/releases](https://github.com/rs-ragul/PaperKit/releases)**
+
+Every build is made by GitHub Actions from the source in this repository — the
+files are built by the workflow, not uploaded by hand.
 
 ---
 
