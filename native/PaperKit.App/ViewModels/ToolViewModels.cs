@@ -132,7 +132,10 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         PickFilesCommand = new RelayCommand(_ => PickFilesRequested?.Invoke(this, EventArgs.Empty));
         RunCommand = new RelayCommand(_ => RunRequested?.Invoke(this, EventArgs.Empty));
-        SaveCommand = new RelayCommand(p => SaveRequested?.Invoke(this, p));
+        SaveCommand = new RelayCommand(p =>
+        {
+            if (p is ResultItem item) SaveRequested?.Invoke(this, item);
+        });
         BackCommand = new RelayCommand(_ => Back());
         RemoveFileCommand = new RelayCommand(p => RemoveFile(p as FileItem));
     }

@@ -2,6 +2,9 @@ name: Build
 
 # Builds the two native apps from the same C# code base and puts them on the
 # Releases page when a version tag is pushed.
+#
+# The android steps are exactly the ones in tools/ci_rehearse.sh, which runs
+# the same thing on a local machine before anything is pushed.
 
 on:
   push:
@@ -54,15 +57,27 @@ jobs:
         run: dotnet workload install android
       - name: android platform and build tools
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+          else
+            echo "cmdline-tools is not on the image, the workload installs what it needs"
+          fi
+      - name: android dependencies
+        run: >
+          dotnet build native/PaperKit.Android/PaperKit.Android.csproj
+          -t:InstallAndroidDependencies -f net8.0-android
+          -p:AndroidSdkDirectory="$ANDROID_HOME"
+          -p:JavaSdkDirectory=$JAVA_HOME
+          -p:AcceptAndroidSDKLicenses=true
       - name: run the tests
         run: dotnet test native/PaperKit.Spec/PaperKit.Spec.csproj -c Release
       - name: publish
         run: >
           dotnet publish native/PaperKit.Android/PaperKit.Android.csproj
           -c Release -f net8.0-android
-          -p:AndroidSdkDirectory="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          -p:AndroidSdkDirectory="$ANDROID_HOME"
           -p:JavaSdkDirectory=$JAVA_HOME
           -p:JavaMaximumHeapSize=2G
       - uses: actions/upload-artifact@v4

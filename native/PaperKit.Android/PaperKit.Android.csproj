@@ -12,8 +12,7 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <!-- .NET 8 supports 64 bit Android ABIs only -->
-    <AndroidSupportedAbis>arm64-v8a;x86_64</AndroidSupportedAbis>
+    <!-- .NET 8 supports 64 bit Android ABIs only (arm64 phones, x64 emulators) -->
     <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
     <!-- trimming needs more memory than a small build machine has -->
     <PublishTrimmed>false</PublishTrimmed>
