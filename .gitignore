@@ -1,0 +1,10 @@
+node_modules/
+app/dist/
+shells/android/android/app/build/
+shells/android/android/.gradle/
+shells/android/android/build/
+shells/windows/release/
+*.p12
+*.keystore
+keystore.properties
+.DS_Store

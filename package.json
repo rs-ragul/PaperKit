@@ -1,0 +1,66 @@
+{
+  "name": "veripdf-windows",
+  "productName": "VeriPDF",
+  "version": "1.0.0",
+  "description": "Offline PDF digital-signature verification",
+  "main": "electron/main.js",
+  "author": "VeriPDF",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "bundle": "node tools/build.mjs",
+    "dist": "npm run bundle && electron-builder --win --x64",
+    "dist:portable": "npm run bundle && electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.28.2"
+  },
+  "build": {
+    "appId": "in.veripdf.app",
+    "productName": "VeriPDF",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "app/dist/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "VeriPDF-${version}-${arch}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "VeriPDF"
+    },
+    "portable": {
+      "artifactName": "VeriPDF-${version}-portable-win-${arch}.${ext}"
+    },
+    "asar": false
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "node-forge": "^1.4.0"
+  }
+}
