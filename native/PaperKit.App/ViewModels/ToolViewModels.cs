@@ -6,6 +6,9 @@ namespace PaperKit.App.ViewModels;
 /// <summary>A file the user picked.</summary>
 public sealed class FileItem
 {
+    /// <summary>Filled in by the window model - removes this file from the list.</summary>
+    public RelayCommand? RemoveCommand { get; set; }
+
     public required string Name { get; init; }
     public required string Path { get; init; }
     public required long Size { get; init; }
@@ -24,6 +27,9 @@ public sealed class FileItem
 /// <summary>A file a tool produced.</summary>
 public sealed class ResultItem
 {
+    /// <summary>Filled in by the window model - saves this result to disk.</summary>
+    public RelayCommand? SaveCommand { get; set; }
+
     public required string Name { get; init; }
     public required byte[] Bytes { get; init; }
     public string SizeText => FileItem.Format(Bytes.Length);
@@ -99,6 +105,9 @@ public sealed class ColorOption : OptionItem
 /// <summary>One tool in the home grid.</summary>
 public sealed class ToolCardViewModel : ObservableObject
 {
+    /// <summary>Filled in by the window model - opens this tool.</summary>
+    public RelayCommand? OpenCommand { get; set; }
+
     public required ToolDescriptor Descriptor { get; init; }
     public string Id => Descriptor.Id;
     public string Name => Descriptor.Name;
@@ -138,6 +147,10 @@ public sealed class MainWindowViewModel : ObservableObject
         });
         BackCommand = new RelayCommand(_ => Back());
         RemoveFileCommand = new RelayCommand(p => RemoveFile(p as FileItem));
+        OpenCommand = new RelayCommand(p =>
+        {
+            if (p is ToolCardViewModel card) Open(card);
+        });
     }
 
     // ----------------------------------------------------------------- events
@@ -153,6 +166,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public RelayCommand SaveCommand { get; }
     public RelayCommand BackCommand { get; }
     public RelayCommand RemoveFileCommand { get; }
+    public RelayCommand OpenCommand { get; }
 
     // ----------------------------------------------------------------- state
 
@@ -181,10 +195,12 @@ public sealed class MainWindowViewModel : ObservableObject
             Raise(nameof(IsHome));
             Raise(nameof(CurrentToolName));
             Raise(nameof(CurrentToolBlurb));
+            Raise(nameof(CurrentToolReady));
         }
     }
 
     public bool IsHome => CurrentTool is null;
+    public bool CurrentToolReady => CurrentTool?.Ready ?? false;
 
     public string CurrentToolName => CurrentTool?.Name ?? string.Empty;
     public string CurrentToolBlurb => CurrentTool?.Blurb ?? string.Empty;
@@ -211,13 +227,15 @@ public sealed class MainWindowViewModel : ObservableObject
         Groups.Clear();
         foreach (var group in ToolCatalog.Groups)
         {
+            var cards = group.Tools
+                .Select(t => new ToolCardViewModel { Descriptor = t, OpenCommand = OpenCommand })
+                .ToList();
             Groups.Add(new ToolGroupViewModel
             {
                 Title = group.Title,
                 Subtitle = group.Subtitle,
-                AllTools = group.Tools.Select(t => new ToolCardViewModel { Descriptor = t }).ToList(),
-                Tools = new ObservableCollection<ToolCardViewModel>(
-                    group.Tools.Select(t => new ToolCardViewModel { Descriptor = t })),
+                AllTools = cards,
+                Tools = new ObservableCollection<ToolCardViewModel>(cards),
             });
         }
         ApplyFilter();
@@ -284,6 +302,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public void AddFile(FileItem file)
     {
+        file.RemoveCommand = RemoveFileCommand;
         Files.Add(file);
         Raise(nameof(CanRun));
     }
@@ -342,6 +361,11 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
+    private void AddResult(string name, byte[] bytes)
+    {
+        Results.Add(new ResultItem { Name = name, Bytes = bytes, SaveCommand = SaveCommand });
+    }
+
     private void RunMerge()
     {
         var order = OptionValue("order") switch
@@ -352,7 +376,7 @@ public sealed class MainWindowViewModel : ObservableObject
             _ => PageOrder.AsPicked,
         };
         var bytes = PdfTools.Merge(Files.Select(f => f.Bytes), order);
-        Results.Add(new ResultItem { Name = "merged.pdf", Bytes = bytes });
+        AddResult("merged.pdf", bytes);
         Status = "Merged into one document.";
     }
 
@@ -368,7 +392,7 @@ public sealed class MainWindowViewModel : ObservableObject
             (int)OptionNumber("pagesPerFile", 1));
         var index = 1;
         foreach (var piece in pieces)
-            Results.Add(new ResultItem { Name = $"part-{index++}.pdf", Bytes = piece });
+            AddResult($"part-{index++}.pdf", piece);
         Status = $"{Results.Count} file(s) created.";
     }
 
@@ -386,7 +410,7 @@ public sealed class MainWindowViewModel : ObservableObject
         if (angle != 0)
             for (var i = 0; i < 64; i++) rotations[i] = angle;
         var bytes = PdfTools.Organise(Files[0].Bytes, null, rotations, order);
-        Results.Add(new ResultItem { Name = "organised.pdf", Bytes = bytes });
+        AddResult("organised.pdf", bytes);
         Status = "Pages rearranged.";
     }
 
@@ -399,7 +423,7 @@ public sealed class MainWindowViewModel : ObservableObject
             _ => RotateMode.Clockwise90,
         };
         var bytes = PdfTools.Rotate(Files[0].Bytes, mode);
-        Results.Add(new ResultItem { Name = "rotated.pdf", Bytes = bytes });
+        AddResult("rotated.pdf", bytes);
         Status = "Pages turned.";
     }
 
@@ -407,7 +431,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         var margin = OptionNumber("margin", 0);
         var bytes = PdfTools.Crop(Files[0].Bytes, margin);
-        Results.Add(new ResultItem { Name = "cropped.pdf", Bytes = bytes });
+        AddResult("cropped.pdf", bytes);
         Status = "White margins removed.";
     }
 
@@ -423,7 +447,7 @@ public sealed class MainWindowViewModel : ObservableObject
         var skipFirst = string.Equals(OptionValue("skipFirst"), "true", StringComparison.OrdinalIgnoreCase);
         var bytes = PdfTools.AddPageNumbers(Files[0].Bytes, OptionValue("prefix"), OptionValue("format"),
             position, (int)OptionNumber("start", 1), skipFirst);
-        Results.Add(new ResultItem { Name = "numbered.pdf", Bytes = bytes });
+        AddResult("numbered.pdf", bytes);
         Status = "Page numbers added.";
     }
 
@@ -437,7 +461,7 @@ public sealed class MainWindowViewModel : ObservableObject
         };
         var bytes = PdfTools.AddWatermark(Files[0].Bytes, OptionValue("text"),
             OptionNumber("size", 48), OptionNumber("opacity", 25) / 100.0, mode);
-        Results.Add(new ResultItem { Name = "watermarked.pdf", Bytes = bytes });
+        AddResult("watermarked.pdf", bytes);
         Status = "Watermark added.";
     }
 }

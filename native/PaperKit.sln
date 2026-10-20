@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaperKit.Shot", "PaperKit.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaperKit.Spec", "PaperKit.Spec\PaperKit.Spec.csproj", "{27BE5FAB-6C1A-472C-97D3-089E10676AA5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaperKit.Ui.Tests", "PaperKit.Ui.Tests\PaperKit.Ui.Tests.csproj", "{EF3BC9FD-396C-42B7-BF97-1BFBA7406334}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{27BE5FAB-6C1A-472C-97D3-089E10676AA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27BE5FAB-6C1A-472C-97D3-089E10676AA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27BE5FAB-6C1A-472C-97D3-089E10676AA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF3BC9FD-396C-42B7-BF97-1BFBA7406334}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF3BC9FD-396C-42B7-BF97-1BFBA7406334}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF3BC9FD-396C-42B7-BF97-1BFBA7406334}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF3BC9FD-396C-42B7-BF97-1BFBA7406334}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

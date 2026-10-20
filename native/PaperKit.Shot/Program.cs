@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Skia;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using PaperKit.App.ViewModels;
 using PaperKitApp = PaperKit.App.App;
+using PaperKitView = PaperKit.App.MainView;
 using PaperKitWindow = PaperKit.App.MainWindow;
 
 namespace PaperKit.Shot;
@@ -34,7 +36,8 @@ internal static class Program
         Console.WriteLine($"saved {output}");
 
         // the tool screen as well
-        var model = (MainWindowViewModel)window.DataContext!;
+        var view = window.GetVisualDescendants().OfType<PaperKitView>().First();
+        var model = (MainWindowViewModel)view.DataContext!;
         var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
         model.Open(card);
         for (var i = 0; i < 40; i++) Dispatcher.UIThread.RunJobs();
