@@ -14,6 +14,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 export ANDROID_HOME="$HOME/android-sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export TMPDIR="${TMPDIR:-$HOME/work}"
+export DOTNET_gcServer=0
 mkdir -p "$TMPDIR"
 
 cd "$(dirname "$0")/.."
@@ -43,8 +44,10 @@ dotnet build native/PaperKit.Android/PaperKit.Android.csproj \
 
 echo "== the tests =="
 dotnet test native/PaperKit.Spec/PaperKit.Spec.csproj -c Release
+dotnet test native/PaperKit.Ui.Tests/PaperKit.Ui.Tests.csproj -c Release
 
 echo "== publish the android app =="
+dotnet build-server shutdown >/dev/null 2>&1 || true
 rm -rf out/android
 dotnet publish native/PaperKit.Android/PaperKit.Android.csproj \
   -c Release -f net8.0-android \

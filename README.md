@@ -46,6 +46,22 @@ All releases: **[github.com/rs-ragul/PaperKit/releases](https://github.com/rs-ra
 Every build is made by GitHub Actions from the source in this repository — the
 files are built by the workflow, not uploaded by hand.
 
+### If the phone shows a white screen
+
+That would be a bug, and the app is built so it can never stay blank: if
+anything goes wrong while the app starts, the reason is written **on the
+screen** in red instead of a white window.
+
+To read the same information from a computer, connect the phone with USB,
+turn on *USB debugging* and run:
+
+```bash
+adb logcat -s PaperKit
+```
+
+Then open PaperKit on the phone. Every line that starts with `PaperKit` says
+where it got to.
+
 ---
 
 ## What PaperKit is

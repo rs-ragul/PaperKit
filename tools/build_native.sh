@@ -13,10 +13,12 @@ export JAVA_HOME="${JAVA_HOME:-$HOME/jdk17}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export TMPDIR="${TMPDIR:-$HOME/work}"
+export DOTNET_gcServer=0
 mkdir -p "$TMPDIR"
 
 echo "==> tests"
 dotnet test native/PaperKit.Spec/PaperKit.Spec.csproj -c Release | tail -3
+dotnet test native/PaperKit.Ui.Tests/PaperKit.Ui.Tests.csproj -c Release | tail -3
 
 echo "==> windows"
 rm -rf out/win
@@ -26,12 +28,13 @@ dotnet publish native/PaperKit.Windows/PaperKit.Windows.csproj \
   -p:IncludeNativeLibrariesForSelfExtract=true -o out/win
 
 echo "==> android"
+dotnet build-server shutdown >/dev/null 2>&1 || true
 rm -rf out/android
 dotnet publish native/PaperKit.Android/PaperKit.Android.csproj \
   -c Release -f net8.0-android -m:1 \
   -p:AndroidSdkDirectory="$ANDROID_HOME" \
   -p:JavaSdkDirectory="$JAVA_HOME" \
-  -p:JavaMaximumHeapSize=640M \
+  -p:JavaMaximumHeapSize=512M \
   -o out/android
 
 echo "==> deliverables"
