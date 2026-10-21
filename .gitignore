@@ -2,6 +2,9 @@ node_modules/
 app/dist/
 dist/
 deliverables/
+out/
+bin/
+obj/
 shells/android/android/app/build/
 shells/android/android/.gradle/
 shells/android/android/build/
