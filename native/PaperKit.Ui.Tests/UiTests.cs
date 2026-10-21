@@ -29,9 +29,9 @@ public static class TestApp
 public class UiTests
 {
     /// <summary>
-    /// Lets the app catch up. Avalonia runs the layout pass from a timer, so
-    /// RunJobs alone is not enough - the buttons would not be on the screen yet
-    /// and the click would land on nothing.
+    /// Lets the app catch up. Avalonia lays out from a timer, so a plain
+    /// RunJobs is not enough - the buttons would not be on the screen yet and
+    /// the click would land on nothing.
     /// </summary>
     private static void Settle(Window? window = null)
     {
@@ -39,9 +39,6 @@ public class UiTests
         {
             Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
             Dispatcher.UIThread.RunJobs();
-
-            // Avalonia lays out from a timer, so force a measure and arrange
-            // pass as well - otherwise the buttons are not on the screen yet
             if (window is not null)
             {
                 window.Measure(window.Bounds.Size);
@@ -50,6 +47,42 @@ public class UiTests
             Thread.Sleep(20);
             Dispatcher.UIThread.RunJobs();
         }
+    }
+
+    /// <summary>
+    /// Waits until something is true. How long a layout pass takes depends on
+    /// the machine, so the tests must not guess how long to wait.
+    /// </summary>
+    private static void WaitFor(Func<bool> condition, string what, int timeoutMs = 10000)
+    {
+        var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < until)
+        {
+            Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
+            Dispatcher.UIThread.RunJobs();
+            if (condition()) return;
+            Thread.Sleep(20);
+        }
+        throw new TimeoutException("timed out waiting for: " + what);
+    }
+
+    /// <summary>Waits until the control sits still, so a click cannot miss it.</summary>
+    private static void WaitForStable(Window window, Control control)
+    {
+        Point? last = null;
+        WaitFor(() =>
+        {
+            var point = control.TranslatePoint(
+                new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window);
+            if (point is null) return false;
+            if (last is not null && last != point)
+            {
+                last = point;
+                return false;
+            }
+            last = point;
+            return true;
+        }, "the control to stop moving");
     }
 
     /// <summary>Opens the real window, runs the test and closes it again.</summary>
@@ -74,6 +107,8 @@ public class UiTests
     /// <summary>Clicks a control the way a person would: down, then up.</summary>
     private static void Click(Window window, Control control)
     {
+        Settle(window);
+        WaitForStable(window, control);
         var centre = new Point(control.Bounds.Width / 2, control.Bounds.Height / 2);
         var point = control.TranslatePoint(centre, window)!.Value;
         window.MouseDown(point, MouseButton.Left);
@@ -86,6 +121,9 @@ public class UiTests
         window.GetVisualDescendants().OfType<Button>()
             .First(b => ReferenceEquals(b.DataContext, card));
 
+    private static Button ButtonWithText(Window window, string text) =>
+        window.GetVisualDescendants().OfType<Button>().First(b => b.Content as string == text);
+
     private static void AddPdf(MainWindowViewModel model)
     {
         model.AddFile(new FileItem
@@ -96,6 +134,23 @@ public class UiTests
             Bytes = File.ReadAllBytes(Path.Combine("fixtures", "valid.pdf")),
         });
         Settle();
+    }
+
+    /// <summary>Opens the merge tool and waits until its screen is there.</summary>
+    private static (Button Run, MainWindowViewModel Model) OpenMerge(Window window, MainWindowViewModel model)
+    {
+        var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
+        Click(window, CardButton(window, card));
+        WaitFor(() => !model.IsHome, "the merge tool to open");
+
+        Button run = null!;
+        WaitFor(() =>
+        {
+            run = window.GetVisualDescendants().OfType<Button>()
+                .FirstOrDefault(b => b.Content as string == "Run");
+            return run is not null && run.Bounds.Width > 0;
+        }, "the run button to appear");
+        return (run, model);
     }
 
     [AvaloniaFact]
@@ -120,7 +175,7 @@ public class UiTests
             var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
             Click(window, CardButton(window, card));
 
-            Assert.False(model.IsHome);
+            WaitFor(() => !model.IsHome, "the merge tool to open");
             Assert.Equal("Merge PDF", model.CurrentToolName);
         });
     }
@@ -130,14 +185,12 @@ public class UiTests
     {
         WithWindow((window, model) =>
         {
-            var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
-            Click(window, CardButton(window, card));
+            OpenMerge(window, model);
             Assert.False(model.IsHome);
 
-            var back = window.GetVisualDescendants().OfType<Button>()
-                .First(b => b.Content as string == "← All tools");
-            Click(window, back);
+            Click(window, ButtonWithText(window, "← All tools"));
 
+            WaitFor(() => model.IsHome, "the tool list to come back");
             Assert.True(model.IsHome);
         });
     }
@@ -147,18 +200,19 @@ public class UiTests
     {
         WithWindow((window, model) =>
         {
-            var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
-            Click(window, CardButton(window, card));
+            var (run, _) = OpenMerge(window, model);
 
             // the run button must be disabled while there is no file
-            var run = window.GetVisualDescendants().OfType<Button>().First(b => b.Content as string == "Run");
+            WaitFor(() => !run.IsEnabled, "the run button to be disabled");
             Assert.False(run.IsEnabled);
 
             AddPdf(model);
+            WaitFor(() => run.IsEnabled, "the run button to be enabled");
             Assert.True(run.IsEnabled);
 
             Click(window, run);
 
+            WaitFor(() => model.Results.Count > 0, "the result to appear");
             Assert.True(model.HasResults);
             Assert.Single(model.Results);
             Assert.Equal("merged.pdf", model.Results[0].Name);
@@ -171,14 +225,19 @@ public class UiTests
     {
         WithWindow((window, model) =>
         {
-            var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
-            Click(window, CardButton(window, card));
+            var (run, _) = OpenMerge(window, model);
             AddPdf(model);
-
-            var run = window.GetVisualDescendants().OfType<Button>().First(b => b.Content as string == "Run");
+            WaitFor(() => run.IsEnabled, "the run button to be enabled");
             Click(window, run);
+            WaitFor(() => model.Results.Count > 0, "the result to appear");
 
-            var save = window.GetVisualDescendants().OfType<Button>().First(b => b.Content as string == "Save");
+            Button save = null!;
+            WaitFor(() =>
+            {
+                save = window.GetVisualDescendants().OfType<Button>()
+                    .FirstOrDefault(b => b.Content as string == "Save");
+                return save is not null && save.Bounds.Width > 0;
+            }, "the save button to appear");
             Assert.NotNull(save.Command);
         });
     }
@@ -188,12 +247,11 @@ public class UiTests
     {
         WithWindow((window, model) =>
         {
-            var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
-            Click(window, CardButton(window, card));
+            OpenMerge(window, model);
 
             Assert.NotEmpty(model.Options);
-            // the option editors are on the screen
-            Assert.NotEmpty(window.GetVisualDescendants().OfType<ComboBox>());
+            WaitFor(() => window.GetVisualDescendants().OfType<ComboBox>().Any(),
+                "the option drop downs to appear");
         });
     }
 
@@ -206,7 +264,7 @@ public class UiTests
 
             var search = window.GetVisualDescendants().OfType<TextBox>().First();
             search.Text = "merge";
-            Settle(window);
+            WaitFor(() => model.Groups.Sum(g => g.Tools.Count) < before, "the list to be filtered");
 
             var after = model.Groups.Sum(g => g.Tools.Count);
             Assert.True(after < before);
@@ -222,8 +280,16 @@ public class UiTests
             var card = model.Groups.SelectMany(g => g.Tools).First(t => !t.Ready);
             Click(window, CardButton(window, card));
 
+            WaitFor(() => model.CurrentTool is not null, "the tool to open");
             Assert.False(model.CurrentToolReady);
-            var run = window.GetVisualDescendants().OfType<Button>().First(b => b.Content as string == "Run");
+
+            Button run = null!;
+            WaitFor(() =>
+            {
+                run = window.GetVisualDescendants().OfType<Button>()
+                    .FirstOrDefault(b => b.Content as string == "Run");
+                return run is not null && run.Bounds.Width > 0;
+            }, "the run button to appear");
             Assert.False(run.IsEnabled);
         });
     }
@@ -246,12 +312,9 @@ public class UiTests
             var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "merge");
             var button = CardButton(window, card);
 
-            var names = window.GetVisualDescendants().OfType<TextBlock>()
-                .Where(t => t.Text is not null)
-                .Select(t => t.Text)
-                .ToList();
+            WaitFor(() => window.GetVisualDescendants().OfType<TextBlock>()
+                .Any(t => t.Text == "Merge PDF"), "the card to show its name");
 
-            Assert.Contains("Merge PDF", names);
             // the card is a real button with a size a finger can hit
             Assert.True(button.Bounds.Width > 100);
             Assert.True(button.Bounds.Height > 40);
