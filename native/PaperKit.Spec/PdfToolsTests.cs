@@ -49,6 +49,15 @@ public class PdfToolsTests
     }
 
     [Fact]
+    public void Merge_can_read_the_shipped_fixture_pdf()
+    {
+        var path = Path.Combine("fixtures", "valid.pdf");
+        Assert.True(File.Exists(path), $"fixture missing: {path}");
+        var result = PdfTools.Merge(new[] { File.ReadAllBytes(path) });
+        Assert.Equal(1, PageCount(result));
+    }
+
+    [Fact]
     public void Merge_can_reverse_the_order_of_the_pages()
     {
         var result = PdfTools.Merge(new[] { MakePdf(2, 400), MakePdf(1, 600) }, PageOrder.Reverse);
