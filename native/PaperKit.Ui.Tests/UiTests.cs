@@ -116,9 +116,10 @@ public class UiTests
     }
 
     /// <summary>Opens the real window, runs the test and closes it again.</summary>
-    private static void WithWindow(Action<Window, MainWindowViewModel> test)
+    private static void WithWindow(Action<Window, MainWindowViewModel> test,
+        double width = 1180, double height = 780)
     {
-        var window = new MainWindow { Width = 1180, Height = 780 };
+        var window = new MainWindow { Width = width, Height = height };
         window.Show();
         Settle(window);
         try
@@ -412,6 +413,131 @@ public class UiTests
             // the card is a real button with a size a finger can hit
             Assert.True(button.Bounds.Width > 100);
             Assert.True(button.Bounds.Height > 40);
+        });
+    }
+
+    [AvaloniaFact]
+    public void On_a_phone_the_run_button_is_on_the_screen_and_works()
+    {
+        // This is the bug that made the phone app look broken: the result
+        // panel was pushed off the screen, so the run button could not be
+        // reached at all.
+        WithWindow((window, model) =>
+        {
+            var (run, _) = OpenMerge(window, model);
+            AddPdf(model);
+            WaitFor(() => run!.IsEnabled, "the run button to be enabled");
+
+            var point = run.TranslatePoint(
+                new Point(run.Bounds.Width / 2, run.Bounds.Height / 2), window)!.Value;
+
+            Assert.True(point.X >= 0 && point.X <= window.Bounds.Width,
+                "the run button is off the side of the screen (x = " + point.X + ")");
+            Assert.True(point.Y >= 0 && point.Y <= window.Bounds.Height,
+                "the run button is off the bottom of the screen (y = " + point.Y + ")");
+
+            ClickButton(window, run, "Run");
+            WaitFor(() => model.Results.Count > 0,
+                () => "the result to appear (the app said: " + model.Status + ")");
+        }, 360, 740);
+    }
+
+    [AvaloniaFact]
+    public void The_tool_screen_is_not_shown_over_the_tool_list()
+    {
+        WithWindow((window, model) =>
+        {
+            var toolScreen = window.GetVisualDescendants().OfType<Grid>()
+                .FirstOrDefault(g => g.Name == "ToolGrid");
+            Assert.NotNull(toolScreen);
+            Assert.False(toolScreen!.IsVisible,
+                "the tool screen is drawn on top of the tool list");
+        });
+    }
+
+    [AvaloniaFact]
+    public void On_a_phone_the_name_of_the_app_is_still_visible()
+    {
+        WithWindow((window, _) =>
+        {
+            var brand = window.GetVisualDescendants().OfType<TextBlock>()
+                .FirstOrDefault(t => t.Text == "PaperKit");
+            Assert.NotNull(brand);
+            WaitFor(() => brand!.Bounds.Width > 40,
+                () => "the name of the app to be visible (it is "
+                      + brand!.Bounds.Width + " wide)");
+        }, 360, 740);
+    }
+
+    [AvaloniaFact]
+    public void The_heading_never_runs_off_the_screen()
+    {
+        WithWindow((window, _) =>
+        {
+            var hero = window.GetVisualDescendants().OfType<TextBlock>()
+                .FirstOrDefault(t => t.Text == "Every PDF tool you need.");
+            Assert.NotNull(hero);
+            WaitFor(() => hero!.Bounds.Width > 0, "the heading to be there");
+            Assert.True(hero!.Bounds.Width <= window.Bounds.Width,
+                "the heading is wider than the window (" + hero.Bounds.Width
+                + " > " + window.Bounds.Width + ")");
+        }, 360, 740);
+    }
+
+    [AvaloniaFact]
+    public void The_tool_cards_all_have_the_same_height()
+    {
+        WithWindow((window, _) =>
+        {
+            var cards = window.GetVisualDescendants().OfType<Button>()
+                .Where(b => b.Classes.Contains("card"))
+                .ToList();
+            Assert.True(cards.Count > 1, "there are no cards to compare");
+            WaitFor(() => cards.All(c => c.Bounds.Height > 0), "the cards to be there");
+
+            var heights = cards.Select(c => c.Bounds.Height).Distinct().ToList();
+            Assert.True(heights.Count == 1,
+                "the cards have different heights: " + string.Join(", ", heights));
+        });
+    }
+
+    [AvaloniaFact]
+    public void A_failing_file_is_reported_as_a_failure()
+    {
+        WithWindow((window, model) =>
+        {
+            var (run, _) = OpenMerge(window, model);
+
+            // a file that is not a PDF at all
+            model.AddFile(new FileItem
+            {
+                Name = "broken.pdf",
+                Path = "broken.pdf",
+                Size = 3,
+                Bytes = new byte[] { 1, 2, 3 },
+            });
+            WaitFor(() => run!.IsEnabled, "the run button to be enabled");
+            ClickButton(window, run, "Run");
+
+            WaitFor(() => model.StatusIsError,
+                () => "the failure to be reported (the app said: " + model.Status + ")");
+            Assert.Contains("Something went wrong", model.Status);
+        });
+    }
+
+    [AvaloniaFact]
+    public void A_switch_shows_its_label_only_once()
+    {
+        WithWindow((window, model) =>
+        {
+            var card = model.Groups.SelectMany(g => g.Tools).First(t => t.Id == "pagenumbers");
+            ClickButton(window, CardButton(window, card), "Page numbers");
+            WaitFor(() => !model.IsHome, "the page numbers tool to open");
+
+            var labels = window.GetVisualDescendants().OfType<TextBlock>()
+                .Count(t => t.Text == "Skip the first page");
+            Assert.True(labels <= 1,
+                "the label of the switch is shown " + labels + " times");
         });
     }
 

@@ -1,2 +1,16 @@
+# Git must not touch the binary files. Without this, a checkout on Windows
+# turns the line endings inside the PDF fixtures into CRLF and the files are
+# no longer valid PDFs - the tools then fail with "PdfTrailer must not be
+# null" on the Windows build machine only.
 fixtures/*.pdf -text
 fixtures/*.der -text
+fixtures/*.cer -text
+fixtures/*.p12 -text
+fixtures/*.pem -text
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary
+*.apk binary
+*.exe binary

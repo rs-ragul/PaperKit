@@ -20,12 +20,17 @@
   <ItemGroup>
     <AvaloniaXaml Include="..\PaperKit.Ui\**\*.axaml" Link="%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\PaperKit.Ui\App.axaml.cs" Link="App.axaml.cs" />
+    <Compile Include="..\PaperKit.Ui\Converters.cs" Link="Converters.cs" />
     <Compile Include="..\PaperKit.Ui\MainView.axaml.cs" Link="MainView.axaml.cs" />
     <Compile Include="..\PaperKit.Ui\MainWindow.axaml.cs" Link="MainWindow.axaml.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PaperKit.App\PaperKit.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\fixtures\valid.pdf" Link="fixtures\valid.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

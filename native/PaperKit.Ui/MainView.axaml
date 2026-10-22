@@ -11,36 +11,52 @@
 
     <!-- ============================================ top bar -->
     <Border Grid.Row="0" Classes="topbar">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-        <Border Grid.Column="0" Classes="mark" VerticalAlignment="Center">
+      <Grid x:Name="TopBar" ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto">
+
+        <Border Grid.Column="0" Grid.Row="0" Classes="mark" VerticalAlignment="Center">
           <Path Classes="markIcon" Data="M7 3h6l5 5v13H7zM13 3v5h5M10 13h6M10 17h4" />
         </Border>
-        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="1">
+
+        <StackPanel x:Name="BrandBlock" Grid.Column="1" Grid.Row="0" Margin="12,0,0,0"
+                    VerticalAlignment="Center" Spacing="1">
           <TextBlock Classes="brand" Text="PaperKit" />
-          <TextBlock Classes="tagline" Text="Every PDF tool. Nothing leaves your device." />
+          <TextBlock x:Name="Tagline" Classes="tagline"
+                     Text="Every PDF tool. Nothing leaves your device." />
         </StackPanel>
 
-        <TextBox Grid.Column="2" Classes="search" Margin="0,0,14,0" VerticalAlignment="Center"
+        <TextBox x:Name="SearchBox" Grid.Column="2" Grid.Row="0" Classes="search"
+                 Margin="0,0,14,0" VerticalAlignment="Center"
                  Text="{Binding Search, Mode=TwoWay}" />
 
-        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+        <StackPanel x:Name="TopActions" Grid.Column="3" Grid.Row="0"
+                    Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
           <Button Classes="ghost" Content="All tools"
                   Command="{Binding BackCommand}"
                   IsVisible="{Binding !IsHome}" />
           <Border Classes="badge">
-            <TextBlock Classes="badge" Text="100% OFFLINE" />
+            <TextBlock x:Name="BadgeText" Classes="badge" Text="100% OFFLINE" />
           </Border>
         </StackPanel>
       </Grid>
     </Border>
 
     <!-- ============================================ home -->
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="30,26,30,40" Spacing="4" IsVisible="{Binding IsHome}">
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  IsVisible="{Binding IsHome}">
+      <StackPanel Margin="30,26,30,40" Spacing="4">
 
-        <TextBlock Classes="hero" Text="Every PDF tool you need." />
-        <TextBlock Classes="subtitle" Margin="0,4,0,18"
+        <TextBlock Classes="hero" Text="Every PDF tool you need." TextWrapping="Wrap" />
+        <TextBlock Classes="subtitle" Margin="0,4,0,18" TextWrapping="Wrap"
                    Text="Merge, split, organise, convert, compress, protect and verify - all on your own device." />
+
+        <Border Classes="emptyState" IsVisible="{Binding !HasSearchResults}">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="emptyTitle" Text="No tool matches that search" />
+            <TextBlock Classes="emptyText" TextWrapping="Wrap"
+                       Text="Try a different word, for example merge, split or watermark." />
+          </StackPanel>
+        </Border>
 
         <ItemsControl ItemsSource="{Binding Groups}">
           <ItemsControl.ItemTemplate>
@@ -56,20 +72,23 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ToolCardViewModel">
-                      <Button Classes="card"
+                      <Button Classes="card" Height="124"
                               Command="{Binding OpenCommand}"
                               CommandParameter="{Binding}"
                               HorizontalContentAlignment="Stretch"
-                              VerticalContentAlignment="Top">
+                              VerticalContentAlignment="Center">
                         <Grid ColumnDefinitions="Auto,*,Auto">
                           <Border Grid.Column="0" Classes="cardIcon">
                             <Path Classes="cardIcon" Data="{Binding Icon}" />
                           </Border>
                           <StackPanel Grid.Column="1" Margin="12,0,8,0">
-                            <TextBlock Classes="cardName" Text="{Binding Name}" />
-                            <TextBlock Classes="cardBlurb" Text="{Binding Blurb}" />
+                            <TextBlock Classes="cardName" Text="{Binding Name}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="cardBlurb" Text="{Binding Blurb}"
+                                       TextWrapping="Wrap" MaxLines="3"
+                                       TextTrimming="CharacterEllipsis" />
                           </StackPanel>
-                          <Border Grid.Column="2" Classes="soon" VerticalAlignment="Top"
+                          <Border Grid.Column="2" Classes="soon" VerticalAlignment="Center"
                                   IsVisible="{Binding NotReady}">
                             <TextBlock Classes="soon" Text="SOON" />
                           </Border>
@@ -87,129 +106,186 @@
     </ScrollViewer>
 
     <!-- ============================================ tool screen -->
-    <Grid Grid.Row="1" Margin="30,22,30,30" ColumnDefinitions="520,*"
+    <Grid x:Name="ToolGrid" Grid.Row="1" Margin="30,22,30,30"
+          ColumnDefinitions="520,*" RowDefinitions="*,Auto"
           IsVisible="{Binding !IsHome}">
 
-      <Grid Grid.Column="0" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,24,0">
+      <!-- the files and the options -->
+      <ScrollViewer x:Name="ToolLeft" Grid.Column="0" Grid.Row="0"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled" Margin="0,0,24,0">
+        <StackPanel Spacing="16">
 
-        <Button Grid.Row="0" Classes="ghost" HorizontalAlignment="Left" Margin="-8,0,0,4"
-                Content="← All tools" Command="{Binding BackCommand}" />
+          <Button Classes="ghost" HorizontalAlignment="Left" Margin="-8,0,0,2"
+                  Content="← All tools" Command="{Binding BackCommand}" />
 
-        <StackPanel Grid.Row="1" Margin="0,0,0,18">
-          <TextBlock Classes="hero" FontSize="27" Text="{Binding CurrentToolName}" />
-          <TextBlock Classes="subtitle" Margin="0,4,0,0" Text="{Binding CurrentToolBlurb}" />
-          <TextBlock Classes="notice" Margin="0,6,0,0" IsVisible="{Binding !CurrentToolReady}"
-                     Text="This tool is still being built - the tools that work are the ones without the SOON badge." />
+          <StackPanel Margin="0,0,0,2">
+            <TextBlock Classes="hero" FontSize="27" Text="{Binding CurrentToolName}" TextWrapping="Wrap" />
+            <TextBlock Classes="subtitle" Margin="0,4,0,0" Text="{Binding CurrentToolBlurb}" TextWrapping="Wrap" />
+            <TextBlock Classes="notice" Margin="0,6,0,0" TextWrapping="Wrap"
+                       IsVisible="{Binding !CurrentToolReady}"
+                       Text="This tool is still being built - the tools that work are the ones without the SOON badge." />
+          </StackPanel>
+
+          <!-- files -->
+          <Border Classes="panel">
+            <StackPanel Spacing="12">
+              <TextBlock Classes="panelTitle" Text="FILES" />
+
+              <Border Classes="dropzone" DragDrop.AllowDrop="True">
+                <StackPanel HorizontalAlignment="Center" Spacing="6">
+                  <TextBlock x:Name="DropHintDesktop" Classes="dropTitle" HorizontalAlignment="Center"
+                             Text="Drop a PDF here" />
+                  <TextBlock x:Name="DropHintPhone" Classes="dropTitle" HorizontalAlignment="Center"
+                             Text="Choose a PDF" IsVisible="False" />
+                  <Button Classes="primary" HorizontalAlignment="Center" Padding="16,9"
+                          Content="Browse your files" Command="{Binding PickFilesCommand}" />
+                </StackPanel>
+              </Border>
+
+              <ItemsControl ItemsSource="{Binding Files}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="vm:FileItem">
+                    <Border Background="{StaticResource Canvas}" CornerRadius="10" Padding="12,9" Margin="0,0,0,8">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                          <TextBlock Classes="fileName" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="fileSize" Text="{Binding SizeText}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="remove" Content="Remove"
+                                VerticalAlignment="Center"
+                                Command="{Binding RemoveFileCommand}"
+                                CommandParameter="{Binding}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock Classes="hint" TextWrapping="Wrap"
+                         IsVisible="{Binding !HasFiles}"
+                         Text="No file yet. Add one PDF to use this tool." />
+            </StackPanel>
+          </Border>
+
+          <!-- options -->
+          <Border Classes="panel" IsVisible="{Binding HasOptions}">
+            <StackPanel Spacing="14">
+              <TextBlock Classes="panelTitle" Text="OPTIONS" />
+              <ItemsControl ItemsSource="{Binding Options}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <ContentControl Content="{Binding}">
+                      <ContentControl.DataTemplates>
+                        <DataTemplate DataType="vm:ChoiceOption">
+                          <StackPanel>
+                            <TextBlock Classes="optionLabel" Text="{Binding Label}" TextWrapping="Wrap" />
+                            <ComboBox Classes="field" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding Choices}"
+                                      SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}" />
+                          </StackPanel>
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:TextOption">
+                          <StackPanel>
+                            <TextBlock Classes="optionLabel" Text="{Binding Label}" TextWrapping="Wrap" />
+                            <TextBox Classes="field" Text="{Binding Value, Mode=TwoWay}" />
+                          </StackPanel>
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:NumberOption">
+                          <StackPanel>
+                            <TextBlock Classes="optionLabel" Text="{Binding Label}" TextWrapping="Wrap" />
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBox Grid.Column="0" Classes="field" Text="{Binding Value, Mode=TwoWay}" />
+                              <TextBlock Grid.Column="1" Classes="optionUnit" Margin="10,0,0,0"
+                                         VerticalAlignment="Center" Text="{Binding Unit}" />
+                            </Grid>
+                            <TextBlock Classes="optionHint" Text="{Binding Range}" />
+                          </StackPanel>
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:ToggleOption">
+                          <CheckBox Classes="field toggle" Content="{Binding Label}"
+                                    IsChecked="{Binding IsOn, Mode=TwoWay}" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:ColorOption">
+                          <StackPanel>
+                            <TextBlock Classes="optionLabel" Text="{Binding Label}" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding Swatches}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:ColorChoice">
+                                  <Button Classes="swatch" Margin="0,0,8,8"
+                                          Command="{Binding $parent[ItemsControl].DataContext.PickCommand}"
+                                          CommandParameter="{Binding Hex}">
+                                    <Border Background="{Binding Hex}" CornerRadius="6"
+                                            Width="24" Height="24" />
+                                  </Button>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ContentControl.DataTemplates>
+                    </ContentControl>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="hint" TextWrapping="Wrap"
+                         Text="Everything is processed on this device." />
+            </StackPanel>
+          </Border>
+
         </StackPanel>
+      </ScrollViewer>
 
-        <!-- files -->
-        <Border Grid.Row="2" Classes="panel" Margin="0,0,0,16">
-          <StackPanel Spacing="12">
-            <TextBlock Classes="panelTitle" Text="FILES" />
-            <Border Classes="dropzone" DragDrop.AllowDrop="True">
-              <StackPanel HorizontalAlignment="Center" Spacing="3">
-                <TextBlock Classes="dropTitle" HorizontalAlignment="Center" Text="Drop a PDF here" />
-                <TextBlock Classes="dropHint" HorizontalAlignment="Center" Text="or" />
-                <Button Classes="primary" HorizontalAlignment="Center" Padding="16,9"
-                        Content="Browse your files" Command="{Binding PickFilesCommand}" />
-              </StackPanel>
+      <!-- the result -->
+      <ScrollViewer x:Name="ToolRight" Grid.Column="1" Grid.Row="0"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
+        <Border Classes="panel" VerticalAlignment="Top">
+          <StackPanel Spacing="14">
+
+            <TextBlock Classes="panelTitle" Text="RESULT" />
+
+            <Button Classes="primary runButton" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Content="{Binding RunLabel}" Command="{Binding RunCommand}"
+                    IsEnabled="{Binding CanRun}" />
+
+            <TextBlock Classes="notice" Classes.fault="{Binding StatusIsError}"
+                       TextWrapping="Wrap"
+                       Text="{Binding Status}" IsVisible="{Binding HasStatus}" />
+
+            <Border x:Name="ResultEmpty" Classes="emptyState" IsVisible="{Binding !HasResults}">
+              <TextBlock Classes="emptyText" TextWrapping="Wrap"
+                         Text="The result appears here as soon as the tool is done." />
             </Border>
 
-            <ItemsControl ItemsSource="{Binding Files}">
+            <ItemsControl ItemsSource="{Binding Results}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="vm:FileItem">
+                <DataTemplate DataType="vm:ResultItem">
                   <Border Background="{StaticResource Canvas}" CornerRadius="10" Padding="12,9" Margin="0,0,0,8">
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Grid.Column="0">
-                        <TextBlock Classes="fileName" Text="{Binding Name}" />
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Classes="resultName" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="fileSize" Text="{Binding SizeText}" />
                       </StackPanel>
-                      <Button Grid.Column="1" Classes="ghost" Content="Remove"
-                              Command="{Binding RemoveFileCommand}"
+                      <Button Grid.Column="1" Classes="primary" Padding="14,7" Content="Save"
+                              VerticalAlignment="Center"
+                              Command="{Binding SaveCommand}"
                               CommandParameter="{Binding}" />
                     </Grid>
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+
           </StackPanel>
         </Border>
-
-        <!-- options -->
-        <Border Grid.Row="3" Classes="panel">
-          <StackPanel Spacing="14">
-            <TextBlock Classes="panelTitle" Text="OPTIONS" />
-            <ItemsControl ItemsSource="{Binding Options}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="vm:OptionItem">
-                  <ContentControl Content="{Binding}">
-                    <ContentControl.DataTemplates>
-                      <DataTemplate DataType="vm:ChoiceOption">
-                        <StackPanel>
-                          <TextBlock Classes="optionLabel" Text="{Binding Label}" />
-                          <ComboBox Classes="field" HorizontalAlignment="Stretch"
-                                    ItemsSource="{Binding Choices}"
-                                    SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}" />
-                        </StackPanel>
-                      </DataTemplate>
-                      <DataTemplate DataType="vm:TextOption">
-                        <StackPanel>
-                          <TextBlock Classes="optionLabel" Text="{Binding Label}" />
-                          <TextBox Classes="field" Text="{Binding Value, Mode=TwoWay}" />
-                        </StackPanel>
-                      </DataTemplate>
-                      <DataTemplate DataType="vm:NumberOption">
-                        <StackPanel>
-                          <TextBlock Classes="optionLabel" Text="{Binding Label}" />
-                          <TextBox Classes="field" Text="{Binding Value, Mode=TwoWay}" />
-                        </StackPanel>
-                      </DataTemplate>
-                      <DataTemplate DataType="vm:ToggleOption">
-                        <StackPanel>
-                          <TextBlock Classes="optionLabel" Text="{Binding Label}" />
-                          <CheckBox Classes="field" Content="{Binding Label}"
-                                    IsChecked="{Binding IsOn, Mode=TwoWay}" />
-                        </StackPanel>
-                      </DataTemplate>
-                    </ContentControl.DataTemplates>
-                  </ContentControl>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Classes="notice" Text="Everything is processed on this device." />
-          </StackPanel>
-        </Border>
-      </Grid>
-
-      <!-- result -->
-      <Border Grid.Column="1" Classes="panel" VerticalAlignment="Top">
-        <StackPanel Spacing="14">
-          <TextBlock Classes="panelTitle" Text="RESULT" />
-          <Button Classes="primary" Content="Run" Command="{Binding RunCommand}"
-                  IsEnabled="{Binding CanRun}" />
-
-          <TextBlock Classes="notice" Text="{Binding Status}"
-                     IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
-          <ItemsControl ItemsSource="{Binding Results}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="vm:ResultItem">
-                <Border Background="{StaticResource Canvas}" CornerRadius="10" Padding="12,9" Margin="0,0,0,8">
-                  <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0">
-                      <TextBlock Classes="resultName" Text="{Binding Name}" />
-                      <TextBlock Classes="fileSize" Text="{Binding SizeText}" />
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="primary" Padding="14,7" Content="Save"
-                            Command="{Binding SaveCommand}"
-                            CommandParameter="{Binding}" />
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-      </Border>
+      </ScrollViewer>
 
     </Grid>
 

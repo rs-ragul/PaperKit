@@ -80,11 +80,25 @@ public sealed class NumberOption : OptionItem
     public double Maximum { get; init; }
     public string? Suffix { get; init; }
 
+    /// <summary>What the number means, shown next to the field.</summary>
+    public string Unit => Suffix is null ? string.Empty : " (" + Suffix + ")";
+
+    /// <summary>The range the number is allowed to be in.</summary>
+    public string Range => Maximum > Minimum
+        ? $"between {Minimum:0.##} and {Maximum:0.##}"
+        : $"at least {Minimum:0.##}";
+
     public double Number
     {
-        get => double.TryParse(Value, out var number) ? number : Minimum;
-        set => Value = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        get => double.TryParse(Value, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var number) && number >= Minimum && number <= Maximum
+            ? number
+            : Minimum;
+        set => Value = Clamp(value).ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
+
+    /// <summary>Keeps a number inside the range the tool allows.</summary>
+    public double Clamp(double value) => Math.Min(Maximum, Math.Max(Minimum, value));
 }
 
 /// <summary>A switch.</summary>
@@ -97,9 +111,32 @@ public sealed class ToggleOption : OptionItem
     }
 }
 
+/// <summary>One colour the user can pick.</summary>
+public sealed record ColorChoice(string Name, string Hex);
+
 /// <summary>A colour.</summary>
 public sealed class ColorOption : OptionItem
 {
+    public ColorOption() =>
+        PickCommand = new RelayCommand(p =>
+        {
+            if (p is string hex) Value = hex;
+        });
+
+    /// <summary>Picks one of the colours.</summary>
+    public RelayCommand PickCommand { get; }
+
+    /// <summary>The colours on offer.</summary>
+    public IReadOnlyList<ColorChoice> Swatches { get; } = new List<ColorChoice>
+    {
+        new("Indigo", "#4F46E5"),
+        new("Sky", "#0EA5E9"),
+        new("Emerald", "#10B981"),
+        new("Amber", "#F59E0B"),
+        new("Red", "#EF4444"),
+        new("Ink", "#111827"),
+        new("White", "#FFFFFF"),
+    };
 }
 
 /// <summary>One tool in the home grid.</summary>
@@ -208,18 +245,52 @@ public sealed class MainWindowViewModel : ObservableObject
     public string Status
     {
         get => _status;
-        set => Set(ref _status, value);
+        set
+        {
+            if (Set(ref _status, value))
+            {
+                StatusIsError = value.StartsWith("Something went wrong", StringComparison.Ordinal)
+                                || value.StartsWith("Could not", StringComparison.Ordinal);
+                Raise(nameof(HasStatus));
+                Raise(nameof(StatusIsError));
+            }
+        }
     }
+
+    /// <summary>True when the message is a failure and not an information.</summary>
+    public bool StatusIsError { get; private set; }
+
+    /// <summary>True when there is something to say under the run button.</summary>
+    public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
+
+    /// <summary>What the run button says while the tool works.</summary>
+    public string RunLabel => Busy ? "Working on it..." : "Run";
+
+    /// <summary>True when the search found nothing at all.</summary>
+    public bool HasSearchResults => Groups.Any(g => g.Tools.Count > 0);
 
     public bool Busy
     {
         get => _busy;
-        set { if (Set(ref _busy, value)) Raise(nameof(CanRun)); }
+        set
+        {
+            if (Set(ref _busy, value))
+            {
+                Raise(nameof(CanRun));
+                Raise(nameof(RunLabel));
+            }
+        }
     }
 
     public bool CanRun => !Busy && Files.Count > 0 && CurrentTool is { Ready: true };
 
     public bool HasResults => Results.Count > 0;
+
+    /// <summary>True when the user has already added a file.</summary>
+    public bool HasFiles => Files.Count > 0;
+
+    /// <summary>True when this tool has options to show.</summary>
+    public bool HasOptions => Options.Count > 0;
 
     /// <summary>Builds the home grid from the catalogue.</summary>
     public void Build()
@@ -256,6 +327,7 @@ public sealed class MainWindowViewModel : ObservableObject
             foreach (var tool in visible) group.Tools.Add(tool);
         }
         Raise(nameof(HasResults));
+        Raise(nameof(HasSearchResults));
     }
 
     /// <summary>Opens a tool and builds its options.</summary>
@@ -289,6 +361,7 @@ public sealed class MainWindowViewModel : ObservableObject
             };
             Options.Add(item);
         }
+        Raise(nameof(HasOptions));
         Status = string.Empty;
         Results.Clear();
     }
@@ -305,6 +378,7 @@ public sealed class MainWindowViewModel : ObservableObject
         file.RemoveCommand = RemoveFileCommand;
         Files.Add(file);
         Raise(nameof(CanRun));
+        Raise(nameof(HasFiles));
     }
 
     public void RemoveFile(FileItem? file)
@@ -312,6 +386,7 @@ public sealed class MainWindowViewModel : ObservableObject
         if (file is null) return;
         Files.Remove(file);
         Raise(nameof(CanRun));
+        Raise(nameof(HasFiles));
     }
 
     public string OptionValue(string key) =>
@@ -325,29 +400,60 @@ public sealed class MainWindowViewModel : ObservableObject
             System.Globalization.CultureInfo.InvariantCulture, out var value) ? value : fallback;
     }
 
-    /// <summary>Runs the tool on the files the user picked.</summary>
-    public void Run()
+    /// <summary>What a tool produced, and what to tell the user about it.</summary>
+    private sealed record ToolOutput(List<(string Name, byte[] Bytes)> Files, string Message);
+
+    /// <summary>
+    /// A copy of the options. The tool works on a background thread, and the
+    /// user may change an option while it is running - so the values are
+    /// taken once and the work is done with those.
+    /// </summary>
+    private sealed class OptionSnapshot
+    {
+        private readonly Dictionary<string, OptionItem> _options;
+
+        public OptionSnapshot(IEnumerable<OptionItem> options) =>
+            _options = options.ToDictionary(o => o.Key);
+
+        public string Text(string key) =>
+            _options.TryGetValue(key, out var option) ? option.Value : string.Empty;
+
+        public double Number(string key, double fallback)
+        {
+            if (!_options.TryGetValue(key, out var option) || option is not NumberOption number)
+                return fallback;
+            if (!double.TryParse(number.Value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var value))
+                return number.Minimum;
+            return number.Clamp(value);
+        }
+    }
+
+    /// <summary>
+    /// Runs the tool on the files the user picked. The PDF work happens off
+    /// the UI thread, so a big document never freezes the window.
+    /// </summary>
+    public async Task RunAsync()
     {
         var tool = CurrentTool;
-        if (tool is null || !tool.Ready || Files.Count == 0) return;
+        if (tool is null || !tool.Ready || Files.Count == 0 || Busy) return;
 
         try
         {
             Busy = true;
+            Status = string.Empty;
             Results.Clear();
-            switch (tool.Id)
-            {
-                case "merge": RunMerge(); break;
-                case "split": RunSplit(); break;
-                case "organise": RunOrganise(); break;
-                case "rotate": RunRotate(); break;
-                case "crop": RunCrop(); break;
-                case "pagenumbers": RunPageNumbers(); break;
-                case "watermark": RunWatermark(); break;
-                default:
-                    Status = "This tool is not ready yet.";
-                    break;
-            }
+
+            // take a copy of the input, so the work can happen in the background
+            var inputs = Files.Select(f => f.Bytes).ToArray();
+            var options = new OptionSnapshot(Options);
+
+            var output = await Task.Run(() => RunTool(tool, inputs, options));
+
+            foreach (var (name, bytes) in output.Files)
+                Results.Add(new ResultItem { Name = name, Bytes = bytes, SaveCommand = SaveCommand });
+
+            Status = output.Message;
         }
         catch (Exception ex)
         {
@@ -361,107 +467,108 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void AddResult(string name, byte[] bytes)
+    private ToolOutput RunTool(ToolCardViewModel tool, byte[][] inputs, OptionSnapshot options) => tool.Id switch
     {
-        Results.Add(new ResultItem { Name = name, Bytes = bytes, SaveCommand = SaveCommand });
-    }
+        "merge" => RunMerge(inputs, options),
+        "split" => RunSplit(inputs, options),
+        "organise" => RunOrganise(inputs, options),
+        "rotate" => RunRotate(inputs, options),
+        "crop" => RunCrop(inputs, options),
+        "pagenumbers" => RunPageNumbers(inputs, options),
+        "watermark" => RunWatermark(inputs, options),
+        _ => new ToolOutput(new List<(string, byte[])>(), "This tool is not ready yet."),
+    };
 
-    private void RunMerge()
+    private ToolOutput RunMerge(byte[][] inputs, OptionSnapshot options)
     {
-        var order = OptionValue("order") switch
+        var order = options.Text("order") switch
         {
             "Reverse" => PageOrder.Reverse,
             "Odd pages first" => PageOrder.OddFirst,
             "Even pages first" => PageOrder.EvenFirst,
             _ => PageOrder.AsPicked,
         };
-        var bytes = PdfTools.Merge(Files.Select(f => f.Bytes), order);
-        AddResult("merged.pdf", bytes);
-        Status = "Merged into one document.";
+        var bytes = PdfTools.Merge(inputs, order);
+        return new ToolOutput(new() { ("merged.pdf", bytes) }, "Merged into one document.");
     }
 
-    private void RunSplit()
+    private ToolOutput RunSplit(byte[][] inputs, OptionSnapshot options)
     {
-        var mode = OptionValue("mode") switch
+        var mode = options.Text("mode") switch
         {
             "Fixed count" => SplitMode.FixedCount,
             "Ranges" => SplitMode.Ranges,
             _ => SplitMode.EveryPage,
         };
-        var pieces = PdfTools.Split(Files[0].Bytes, mode, OptionValue("ranges"),
-            (int)OptionNumber("pagesPerFile", 1));
+        var pieces = PdfTools.Split(inputs[0], mode, options.Text("ranges"),
+            (int)options.Number("pagesPerFile", 1));
+        var files = new List<(string, byte[])>();
         var index = 1;
         foreach (var piece in pieces)
-            AddResult($"part-{index++}.pdf", piece);
-        Status = $"{Results.Count} file(s) created.";
+            files.Add(($"part-{index++}.pdf", piece));
+        return new ToolOutput(files, $"{files.Count} file(s) created.");
     }
 
-    private void RunOrganise()
+    private ToolOutput RunOrganise(byte[][] inputs, OptionSnapshot options)
     {
-        var order = OptionValue("order") switch
+        var order = options.Text("order") switch
         {
             "Reverse" => PageOrder.Reverse,
             "Odd pages first" => PageOrder.OddFirst,
             "Even pages first" => PageOrder.EvenFirst,
             _ => PageOrder.AsPicked,
         };
-        var angle = int.TryParse(OptionValue("rotation"), out var parsed) ? parsed : 0;
+        var angle = int.TryParse(options.Text("rotation"), out var parsed) ? parsed : 0;
         var rotations = new Dictionary<int, int>();
         if (angle != 0)
             for (var i = 0; i < 64; i++) rotations[i] = angle;
-        var bytes = PdfTools.Organise(Files[0].Bytes, null, rotations, order);
-        AddResult("organised.pdf", bytes);
-        Status = "Pages rearranged.";
+        var bytes = PdfTools.Organise(inputs[0], null, rotations, order);
+        return new ToolOutput(new() { ("organised.pdf", bytes) }, "Pages rearranged.");
     }
 
-    private void RunRotate()
+    private ToolOutput RunRotate(byte[][] inputs, OptionSnapshot options)
     {
-        var mode = OptionValue("angle") switch
+        var mode = options.Text("angle") switch
         {
             "180" => RotateMode.Clockwise180,
             "270" => RotateMode.Clockwise270,
             _ => RotateMode.Clockwise90,
         };
-        var bytes = PdfTools.Rotate(Files[0].Bytes, mode);
-        AddResult("rotated.pdf", bytes);
-        Status = "Pages turned.";
+        var bytes = PdfTools.Rotate(inputs[0], mode);
+        return new ToolOutput(new() { ("rotated.pdf", bytes) }, "Pages turned.");
     }
 
-    private void RunCrop()
+    private ToolOutput RunCrop(byte[][] inputs, OptionSnapshot options)
     {
-        var margin = OptionNumber("margin", 0);
-        var bytes = PdfTools.Crop(Files[0].Bytes, margin);
-        AddResult("cropped.pdf", bytes);
-        Status = "White margins removed.";
+        var bytes = PdfTools.Crop(inputs[0], options.Number("margin", 0));
+        return new ToolOutput(new() { ("cropped.pdf", bytes) }, "White margins removed.");
     }
 
-    private void RunPageNumbers()
+    private ToolOutput RunPageNumbers(byte[][] inputs, OptionSnapshot options)
     {
-        var position = OptionValue("position") switch
+        var position = options.Text("position") switch
         {
             "Bottom right" => NumberPosition.BottomRight,
             "Top right" => NumberPosition.TopRight,
             "Top left" => NumberPosition.TopLeft,
             _ => NumberPosition.BottomCentre,
         };
-        var skipFirst = string.Equals(OptionValue("skipFirst"), "true", StringComparison.OrdinalIgnoreCase);
-        var bytes = PdfTools.AddPageNumbers(Files[0].Bytes, OptionValue("prefix"), OptionValue("format"),
-            position, (int)OptionNumber("start", 1), skipFirst);
-        AddResult("numbered.pdf", bytes);
-        Status = "Page numbers added.";
+        var skipFirst = string.Equals(options.Text("skipFirst"), "true", StringComparison.OrdinalIgnoreCase);
+        var bytes = PdfTools.AddPageNumbers(inputs[0], options.Text("prefix"), options.Text("format"),
+            position, (int)options.Number("start", 1), skipFirst);
+        return new ToolOutput(new() { ("numbered.pdf", bytes) }, "Page numbers added.");
     }
 
-    private void RunWatermark()
+    private ToolOutput RunWatermark(byte[][] inputs, OptionSnapshot options)
     {
-        var mode = OptionValue("mode") switch
+        var mode = options.Text("mode") switch
         {
             "Horizontal" => WatermarkMode.Horizontal,
             "Tiled" => WatermarkMode.Tiled,
             _ => WatermarkMode.Diagonal,
         };
-        var bytes = PdfTools.AddWatermark(Files[0].Bytes, OptionValue("text"),
-            OptionNumber("size", 48), OptionNumber("opacity", 25) / 100.0, mode);
-        AddResult("watermarked.pdf", bytes);
-        Status = "Watermark added.";
+        var bytes = PdfTools.AddWatermark(inputs[0], options.Text("text"),
+            options.Number("size", 48), options.Number("opacity", 25) / 100.0, mode);
+        return new ToolOutput(new() { ("watermarked.pdf", bytes) }, "Watermark added.");
     }
 }

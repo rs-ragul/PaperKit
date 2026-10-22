@@ -18,8 +18,4 @@
     <ProjectReference Include="..\PaperKit.Core\PaperKit.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\..\fixtures\valid.pdf" Link="fixtures\valid.pdf" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>

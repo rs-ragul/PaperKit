@@ -1,8 +1,11 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using PaperKit.App.ViewModels;
 using PaperKit.Core;
 
@@ -15,7 +18,12 @@ namespace PaperKit.App;
 /// </summary>
 public partial class MainView : UserControl
 {
+    /// <summary>Below this width the app switches to the phone layout.</summary>
+    private const double CompactWidth = 860;
+
     private readonly MainWindowViewModel _model = new();
+    private bool _compact;
+    private bool _layoutApplied;
 
     public MainView()
     {
@@ -24,18 +32,93 @@ public partial class MainView : UserControl
         _model.Build();
 
         _model.PickFilesRequested += async (_, _) => await PickFilesAsync();
-        _model.RunRequested += (_, _) => Run();
+        _model.RunRequested += async (_, _) => await _model.RunAsync();
         _model.SaveRequested += async (_, item) => await SaveAsync(item as ResultItem);
 
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(KeyDownEvent, OnKeyDown);
-    }
 
-    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+        // The layout is changed on the next frame: the grid cannot be
+        // rebuilt while Avalonia is measuring it.
+        SizeChanged += (_, e) =>
+        {
+            var width = e.NewSize.Width;
+            Dispatcher.UIThread.Post(() => ApplyLayout(width), DispatcherPriority.Loaded);
+        };
+    }
 
     /// <summary>The file and folder picker of the platform we run on.</summary>
     private IStorageProvider? Storage => TopLevel.GetTopLevel(this)?.StorageProvider;
+
+    // ------------------------------------------------------------ the layout
+
+    /// <summary>
+    /// The app has to look right on a big screen and on a phone.
+    ///
+    /// On a narrow screen the search moves under the brand, the tool screen
+    /// becomes a single column and the run button is pinned to the bottom -
+    /// so it can never be off the screen or out of reach.
+    /// </summary>
+    private void ApplyLayout(double width)
+    {
+        var compact = width < CompactWidth;
+        if (_layoutApplied && compact == _compact) return;
+        _compact = compact;
+        _layoutApplied = true;
+
+        Tagline.IsVisible = !compact;
+        BadgeText.Text = compact ? "OFFLINE" : "100% OFFLINE";
+        DropHintDesktop.IsVisible = !compact;
+        DropHintPhone.IsVisible = compact;
+
+        if (compact)
+        {
+            // the search gets a row of its own
+            Grid.SetColumn(SearchBox, 0);
+            Grid.SetRow(SearchBox, 1);
+            Grid.SetColumnSpan(SearchBox, 4);
+            SearchBox.Width = double.NaN;
+            SearchBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+            SearchBox.Margin = new Thickness(0, 10, 0, 0);
+
+            // one column, and the result stays in reach at the bottom
+            ToolGrid.ColumnDefinitions = new ColumnDefinitions("Auto,*");
+            ToolGrid.RowDefinitions = new RowDefinitions("*,Auto");
+            Grid.SetColumn(ToolLeft, 0);
+            Grid.SetRow(ToolLeft, 0);
+            Grid.SetColumn(ToolRight, 0);
+            Grid.SetRow(ToolRight, 1);
+            ToolLeft.Margin = new Thickness(0);
+            ToolRight.Margin = new Thickness(0, 12, 0, 0);
+            ToolRight.MaxHeight = 300;
+            ResultEmpty.IsVisible = false;
+            ToolGrid.Margin = new Thickness(16, 16, 16, 16);
+        }
+        else
+        {
+            Grid.SetColumn(SearchBox, 2);
+            Grid.SetRow(SearchBox, 0);
+            Grid.SetColumnSpan(SearchBox, 1);
+            SearchBox.Width = 280;
+            SearchBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+            SearchBox.Margin = new Thickness(0, 0, 14, 0);
+
+            // two columns: the files and the options, and the result
+            ToolGrid.ColumnDefinitions = new ColumnDefinitions("520,*");
+            ToolGrid.RowDefinitions = new RowDefinitions("*,Auto");
+            Grid.SetColumn(ToolLeft, 0);
+            Grid.SetRow(ToolLeft, 0);
+            Grid.SetColumn(ToolRight, 1);
+            Grid.SetRow(ToolRight, 0);
+            ToolLeft.Margin = new Thickness(0, 0, 24, 0);
+            ToolRight.Margin = new Thickness(0);
+            ToolRight.MaxHeight = double.PositiveInfinity;
+            ResultEmpty.IsVisible = true;
+            ToolGrid.Margin = new Thickness(30, 22, 30, 30);
+        }
+
+    }
 
     // ------------------------------------------------------------ drag & drop
 
@@ -136,20 +219,6 @@ public partial class MainView : UserControl
             {
                 // skip what cannot be read
             }
-        }
-    }
-
-    // ----------------------------------------------------------------- run
-
-    private void Run()
-    {
-        try
-        {
-            _model.Run();
-        }
-        catch (Exception ex)
-        {
-            _model.Status = "Something went wrong: " + ex.Message;
         }
     }
 

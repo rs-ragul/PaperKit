@@ -241,8 +241,47 @@
     <Setter Property="Background" Value="#4338CA" />
   </Style>
 
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="#3730A3" />
+  </Style>
+
   <Style Selector="Button.primary:disabled /template/ ContentPresenter">
     <Setter Property="Background" Value="#C7C9F5" />
+  </Style>
+
+  <!-- the run button is the main action of the tool screen -->
+  <Style Selector="Button.runButton">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="20,13" />
+    <Setter Property="FontSize" Value="15" />
+  </Style>
+
+  <!-- a button that removes a file: quiet, but clearly a button -->
+  <Style Selector="Button.remove">
+    <Setter Property="Background" Value="#FFFFFF" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button.remove:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#FEE2E2" />
+    <Setter Property="TextElement.Foreground" Value="#B91C1C" />
+  </Style>
+
+  <!-- a colour of the palette -->
+  <Style Selector="Button.swatch">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button.swatch:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#E5E7EB" />
   </Style>
 
   <Style Selector="Button.ghost">
@@ -257,6 +296,47 @@
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{StaticResource Muted}" />
     <Setter Property="Margin" Value="0,0,0,6" />
+  </Style>
+
+  <Style Selector="TextBlock.optionUnit">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+  </Style>
+
+  <Style Selector="TextBlock.optionHint">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="#9CA3AF" />
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+
+  <Style Selector="CheckBox.toggle">
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <!-- a quiet note under a field -->
+  <Style Selector="TextBlock.hint">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="#9CA3AF" />
+  </Style>
+
+  <!-- what the app shows when there is nothing to show yet -->
+  <Style Selector="Border.emptyState">
+    <Setter Property="Background" Value="#FFFFFF" />
+    <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="18" />
+  </Style>
+
+  <Style Selector="TextBlock.emptyTitle">
+    <Setter Property="FontSize" Value="14.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.emptyText">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
   </Style>
 
   <Style Selector="ComboBox.field">
@@ -300,6 +380,33 @@
   <Style Selector="TextBlock.notice">
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="Foreground" Value="{StaticResource Muted}" />
+  </Style>
+
+  <!-- a failure has to look like a failure -->
+  <Style Selector="TextBlock.notice.fault">
+    <Setter Property="Foreground" Value="#B91C1C" />
+    <Setter Property="Background" Value="#FEF2F2" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+
+  <!-- the keyboard focus must be visible, but it must not move the button -->
+  <Style Selector="Button.primary:focus /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="#312E81" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="Button.ghost:focus /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentSoft}" />
+  </Style>
+
+  <Style Selector="Button.remove:focus /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="Button.swatch:focus /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
 
 </Styles>

@@ -79,6 +79,11 @@ same PDF engine — two thin platform heads.
 
 ![PaperKit](screenshots/native-01-home.png)
 
+The same app on a phone - the interface moves the search under the name and
+keeps the run button in reach at the bottom:
+
+![PaperKit on Android](screenshots/native-03-phone.png)
+
 ## The tools
 
 | Group | Tools |
